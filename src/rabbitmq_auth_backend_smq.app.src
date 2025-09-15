@@ -2,7 +2,7 @@
     {description, "RabbitMQ SMQ Authentication Backend"},
     {vsn, "rolling"},
     {modules, [
-        'rabbit_auth_backend_smq', 'rabbit_auth_backend_smq_app', 'rabbit_auth_backend_smq_sup'
+        'rabbitmq_auth_backend_smq', 'rabbitmq_auth_backend_smq_app', 'rabbitmq_auth_backend_smq_sup'
     ]},
     {registered, []},
     {applications, [

@@ -1,2 +1,2 @@
-# rabbit_auth_backend_smq
+# rabbitmq_auth_backend_smq
 

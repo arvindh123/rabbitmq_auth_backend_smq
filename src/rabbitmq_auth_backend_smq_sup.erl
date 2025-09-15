@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
-%% @doc rabbit_auth_backend_smq top level supervisor.
+%% @doc rabbitmq_auth_backend_smq top level supervisor.
 %% @end
 %%%-------------------------------------------------------------------
 
--module(rabbit_auth_backend_smq_sup).
+-module(rabbitmq_auth_backend_smq_sup).
 
 -behaviour(supervisor).
 

@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
-%% @doc rabbit_auth_backend_smq
+%% @doc rabbitmq_auth_backend_smq
 %% @end
 %%%-------------------------------------------------------------------
 
--module(rabbit_auth_backend_smq).
+-module(rabbitmq_auth_backend_smq).
 
 -include_lib("rabbit_common/include/rabbit.hrl").
 -include_lib("smq_auth/include/smq_auth.hrl").
