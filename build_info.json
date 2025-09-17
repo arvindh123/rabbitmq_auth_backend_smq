@@ -1,0 +1,1413 @@
+{
+  "apps": [
+    {
+      "name": "rabbitmq_auth_backend_smq",
+      "dir": "",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_auth_backend_smq",
+      "dir": "deps/rabbitmq_auth_backend_smq",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_web_stomp_examples",
+      "dir": "deps/rabbitmq_web_stomp_examples",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "khepri",
+      "dir": "deps/khepri",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "cowlib",
+      "dir": "deps/cowlib",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "horus",
+      "dir": "deps/horus",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "hpack",
+      "dir": "deps/hpack",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_shovel_prometheus",
+      "dir": "deps/rabbitmq_shovel_prometheus",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "seshat",
+      "dir": "deps/seshat",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "gproc",
+      "dir": "deps/gproc",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_jms_topic_exchange",
+      "dir": "deps/rabbitmq_jms_topic_exchange",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_stream",
+      "dir": "deps/rabbitmq_stream",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_ct_client_helpers",
+      "dir": "deps/rabbitmq_ct_client_helpers",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_prometheus",
+      "dir": "deps/rabbitmq_prometheus",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_amqp_client",
+      "dir": "deps/rabbitmq_amqp_client",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_random_exchange",
+      "dir": "deps/rabbitmq_random_exchange",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_top",
+      "dir": "deps/rabbitmq_top",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_tracing",
+      "dir": "deps/rabbitmq_tracing",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "amqp_client",
+      "dir": "deps/amqp_client",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "enough",
+      "dir": "deps/enough",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_peer_discovery_aws",
+      "dir": "deps/rabbitmq_peer_discovery_aws",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "osiris",
+      "dir": "deps/osiris",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_prelaunch",
+      "dir": "deps/rabbitmq_prelaunch",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_federation",
+      "dir": "deps/rabbitmq_federation",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_web_stomp",
+      "dir": "deps/rabbitmq_web_stomp",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "smq_auth",
+      "dir": "deps/smq_auth",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "hex_core",
+      "dir": "deps/hex_core",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "khepri_mnesia_migration",
+      "dir": "deps/khepri_mnesia_migration",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "oauth2_client",
+      "dir": "deps/oauth2_client",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_recent_history_exchange",
+      "dir": "deps/rabbitmq_recent_history_exchange",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_peer_discovery_consul",
+      "dir": "deps/rabbitmq_peer_discovery_consul",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_auth_backend_http",
+      "dir": "deps/rabbitmq_auth_backend_http",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_stream_common",
+      "dir": "deps/rabbitmq_stream_common",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "credentials_obfuscation",
+      "dir": "deps/credentials_obfuscation",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "ctx",
+      "dir": "deps/ctx",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "amqp10_client",
+      "dir": "deps/amqp10_client",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_auth_backend_cache",
+      "dir": "deps/rabbitmq_auth_backend_cache",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_peer_discovery_k8s",
+      "dir": "deps/rabbitmq_peer_discovery_k8s",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_sharding",
+      "dir": "deps/rabbitmq_sharding",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_shovel",
+      "dir": "deps/rabbitmq_shovel",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_stream_management",
+      "dir": "deps/rabbitmq_stream_management",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_web_dispatch",
+      "dir": "deps/rabbitmq_web_dispatch",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "stdout_formatter",
+      "dir": "deps/stdout_formatter",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "syslog",
+      "dir": "deps/syslog",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_federation_prometheus",
+      "dir": "deps/rabbitmq_federation_prometheus",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "cuttlefish",
+      "dir": "deps/cuttlefish",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_shovel_management",
+      "dir": "deps/rabbitmq_shovel_management",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_auth_mechanism_ssl",
+      "dir": "deps/rabbitmq_auth_mechanism_ssl",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_consistent_hash_exchange",
+      "dir": "deps/rabbitmq_consistent_hash_exchange",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "thoas",
+      "dir": "deps/thoas",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_ct_helpers",
+      "dir": "deps/rabbitmq_ct_helpers",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "grpcbox",
+      "dir": "deps/grpcbox",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_auth_backend_internal_loopback",
+      "dir": "deps/rabbitmq_auth_backend_internal_loopback",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_auth_backend_ldap",
+      "dir": "deps/rabbitmq_auth_backend_ldap",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_aws",
+      "dir": "deps/rabbitmq_aws",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_federation_management",
+      "dir": "deps/rabbitmq_federation_management",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "chatterbox",
+      "dir": "deps/chatterbox",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_management",
+      "dir": "deps/rabbitmq_management",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_peer_discovery_etcd",
+      "dir": "deps/rabbitmq_peer_discovery_etcd",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "acceptor_pool",
+      "dir": "deps/acceptor_pool",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_trust_store",
+      "dir": "deps/rabbitmq_trust_store",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "recon",
+      "dir": "deps/recon",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "systemd",
+      "dir": "deps/systemd",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "gen_batch_server",
+      "dir": "deps/gen_batch_server",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_mqtt",
+      "dir": "deps/rabbitmq_mqtt",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_amqp1_0",
+      "dir": "deps/rabbitmq_amqp1_0",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "redbug",
+      "dir": "deps/redbug",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_codegen",
+      "dir": "deps/rabbitmq_codegen",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_event_exchange",
+      "dir": "deps/rabbitmq_event_exchange",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "aten",
+      "dir": "deps/aten",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_web_mqtt",
+      "dir": "deps/rabbitmq_web_mqtt",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_web_mqtt_examples",
+      "dir": "deps/rabbitmq_web_mqtt_examples",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "amqp10_common",
+      "dir": "deps/amqp10_common",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_management_agent",
+      "dir": "deps/rabbitmq_management_agent",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "ra",
+      "dir": "deps/ra",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "json",
+      "dir": "deps/json",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "getopt",
+      "dir": "deps/getopt",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbit_common",
+      "dir": "deps/rabbit_common",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_auth_backend_oauth2",
+      "dir": "deps/rabbitmq_auth_backend_oauth2",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "csv",
+      "dir": "deps/csv",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_peer_discovery_common",
+      "dir": "deps/rabbitmq_peer_discovery_common",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_stomp",
+      "dir": "deps/rabbitmq_stomp",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "ranch",
+      "dir": "deps/ranch",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "sysmon_handler",
+      "dir": "deps/sysmon_handler",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "trust_store_http",
+      "dir": "deps/trust_store_http",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbit",
+      "dir": "deps/rabbit",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "observer_cli",
+      "dir": "deps/observer_cli",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    },
+    {
+      "name": "rabbitmq_cli",
+      "dir": "deps/rabbitmq_cli",
+      "src_dirs": [
+        "src"
+      ],
+      "extra_src_dirs": [
+        "test"
+      ],
+      "include_dirs": [
+        "include",
+        "src",
+        ""
+      ],
+      "macros": {}
+    }
+  ],
+  "deps": []
+}

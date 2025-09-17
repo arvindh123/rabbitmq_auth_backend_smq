@@ -1,85 +1,92 @@
-PROJECT = rabbitmq_auth_backend_smq
-PROJECT_DESCRIPTION = RabbitMQ SMQ Authentication Backend
-PROJECT_MOD = rabbitmq_auth_backend_smq
-RABBITMQ_VERSION = v4.1.4
-RABBITMQ_REPO = https://github.com/rabbitmq/rabbitmq-server.git
+RABBITMQ_DIR := rabbitmq-server
+CURRENT_DIR := $(notdir $(CURDIR))
+DEST_DIR := $(RABBITMQ_DIR)/deps/$(CURRENT_DIR)
+RABBITMQ_VERSION := v4.1.4
 
-define PROJECT_ENV
-[
-	    {http_method,   	 get},
-	    {request_timeout,    15000},
-	    {connection_timeout, 15000},
-	    {user_path,     "http://localhost:8000/auth/user"},
-	    {vhost_path,    "http://localhost:8000/auth/vhost"},
-	    {resource_path, "http://localhost:8000/auth/resource"},
-	    {topic_path,    "http://localhost:8000/auth/topic"}
-	  ]
+
+define make_docker
+docker build \
+	-t supermq/rabbitmq:$(RABBITMQ_VERSION) \
+	-t supermq/rabbitmq:latest \
+	-f docker/Dockerfile .
 endef
 
+.ONESHELL:
 
-define PROJECT_APP_EXTRA_KEYS
-	{broker_version_requirements, []}
-endef
+.PHONY: all deps clone copy makefile  build run clean clean-smq-auth
+
+# Default target
+all: deps
+	@echo "Running default make in $(DEST_DIR)"
+	@$(MAKE) -C $(DEST_DIR)
+
+deps: clone copy makefile
+	@set -e; \
+	make -C $(DEST_DIR) deps; \
+	rm -rf deps; \
+	mkdir -p deps; \
+	cp -r $(RABBITMQ_DIR)/deps/* deps/;
+
+clone:
+	@if [ ! -d "$(RABBITMQ_DIR)" ]; then \
+		git clone --branch $(RABBITMQ_VERSION) --depth 1 https://github.com/rabbitmq/rabbitmq-server.git $(RABBITMQ_DIR); \
+	else \
+		echo "$(RABBITMQ_DIR) already exists, skipping clone"; \
+	fi
+
+# Step 2: Copy current directory into deps/<current_dir_name>
+copy:
+	@mkdir -p $(DEST_DIR)
+	@git ls-files -z  | rsync -av --ignore-missing-args --files-from=- --from0 ./ $(DEST_DIR)/
+
+makefile:
+	@echo "Creating Makefile in $(DEST_DIR)"
+	@mkdir -p $(DEST_DIR)
+	@cat > $(DEST_DIR)/Makefile << EOF
+		PROJECT = rabbitmq_auth_backend_smq
+		PROJECT_DESCRIPTION = RabbitMQ SMQ Authentication Backend
+		PROJECT_MOD = rabbitmq_auth_backend_smq_app
+		RABBITMQ_VERSION := v4.1.4
+		RABBITMQ_REPO    := https://github.com/rabbitmq/rabbitmq-server
+		RABBITMQ_BUILD_DIR := build-env
+
+		DEPS = rabbit_common rabbit amqp_client smq_auth
+		TEST_DEPS = rabbitmq_ct_helpers rabbitmq_ct_client_helpers
+
+		DEP_EARLY_PLUGINS = rabbit_common/mk/rabbitmq-early-plugin.mk
+		DEP_PLUGINS = rabbit_common/mk/rabbitmq-plugin.mk
+
+		dep_smq_auth = git https://github.com/arvindh123/smq_auth.git master
+
+		## skip unused vars as error
+		ERLC_OPTS +=  +warn_unused_vars
+
+		# FIXME: Use erlang.mk patched for RabbitMQ, while waiting for PRs to be
+		# reviewed and merged.
+
+		ERLANG_MK_REPO = https://github.com/rabbitmq/erlang.mk.git
+		ERLANG_MK_COMMIT = rabbitmq-tmp
+
+		include ../../rabbitmq-components.mk
+		include ../../erlang.mk
+	EOF
 
 
-# RABBITMQ_INTERNAL_DEPS = rabbit rabbitmq_cli amqp10_common rabbitmq_prelaunch
-# RABBITMQ_DEPS = rabbit_common  amqp_client ${RABBITMQ_INTERNAL_DEPS}
+build: deps
+	@set -e; \
+	make -C $(DEST_DIR) dist; \
+	rm -rf plugins; \
+	mkdir -p plugins; \
+	cp -r $(DEST_DIR)/plugins/* plugins/; \
+	$(call make_docker)
 
-# DEPS = ${RABBITMQ_DEPS} smq_auth
-DEPS = rabbit_common  amqp_client smq_auth
-TEST_DEPS = rabbitmq_ct_helpers rabbitmq_ct_client_helpers
+run:
+	docker compose -p smq_rabbit_$(subst .,_,$(RABBITMQ_VERSION)) -f docker/docker-compose.yaml up
 
-# # Define a function to create deps from the same repo
-# define dep_rabbitmq_template
-# dep_$(1) = git-subfolder ${RABBITMQ_REPO} ${RABBITMQ_VERSION} deps/$(1)
-# endef
-# # Apply it to all RabbitMQ dependencies
-# $(foreach comp,$(RABBITMQ_DEPS),$(eval $(call dep_rabbitmq_template,$(comp))))
+clean:
+	rm -rf deps
+	rm -rf plugins
+	rm -rf rabbitmq-server
 
-
-
-dep_rabbit_common = git-subfolder ${RABBITMQ_REPO} ${RABBITMQ_VERSION} deps/rabbit_common
-dep_amqp_client = git-subfolder ${RABBITMQ_REPO} ${RABBITMQ_VERSION} deps/amqp_client
-dep_smq_auth = git https://github.com/arvindh123/smq_auth.git master
-
-LOCAL_DEPS = ssl inets crypto public_key
-
-DEP_EARLY_PLUGINS = rabbit_common/mk/rabbitmq-early-plugin.mk
-DEP_PLUGINS = rabbit_common/mk/rabbitmq-plugin.mk
-
-# FIXME: Use erlang.mk patched for RabbitMQ, while waiting for PRs to be
-# reviewed and merged.
-
-ERLANG_MK_REPO = https://github.com/rabbitmq/erlang.mk.git
-ERLANG_MK_COMMIT = rabbitmq-tmp
-
-
-ERLC_OPTS +=  +warn_unused_vars
-
-# include rabbitmq-components.mk
-include erlang.mk
-
-
-.PHONY: fetch-rabbit
-
-# Target: fetch just deps/rabbit
-fetch-rabbit:
-	@echo "Fetching deps/rabbit from RabbitMQ Server (${RABBITMQ_VERSION})..."
-	@rm -rf deps/rabbit
-	@git clone --depth 1 --branch ${RABBITMQ_VERSION} ${RABBITMQ_REPO} tmp-rabbit
-	@mkdir -p deps
-	@mv tmp-rabbit/deps/rabbit deps/
-	@rm -rf tmp-rabbit
-	@echo "✅ deps/rabbit cloned successfully."
-
-
-fetch-deps: fetch-rabbit
-
-
-# Disable RabbitMQ CLI-related tasks to avoid errors
-NO_CLI_TARGETS = install-cli-scripts install-cli-escripts dialyze
-
-# Override CLI targets to noop
-$(NO_CLI_TARGETS):
-	@echo "Skipping RabbitMQ CLI target $@"
-
+clean-smq-auth:
+	rm -rf rabbitmq-server/deps/smq-auth

@@ -7,7 +7,6 @@
 
 -include_lib("rabbit_common/include/rabbit.hrl").
 -include_lib("smq_auth/include/smq_auth.hrl").
--include_lib("kernel/include/logger.hrl").
 
 -behaviour(rabbit_authn_backend).
 -behaviour(rabbit_authz_backend).
@@ -22,116 +21,95 @@
     expiry_timestamp/1
 ]).
 
-%% If keepalive connection is closed, retry N times before failing.
--define(RETRY_ON_KEEPALIVE_CLOSED, 3).
--define(RESOURCE_REQUEST_PARAMETERS, [username, vhost, resource, name, permission]).
--define(SUCCESSFUL_RESPONSE_CODES, [200, 201]).
-
-%%--------------------------------------------------------------------
-
 description() ->
-    [{name, <<"SMQ Auth">>}, {description, <<"SuperMQ Authentication / Authorization">>}].
+    [{name, <<"SMQ Auth"/utf8>>}, {description, <<"SuperMQ Authentication / Authorization"/utf8>>}].
 
 %%--------------------------------------------------------------------
 
+getSocketInfo(AuthProps) ->
+    case proplists:get_value(sockOrAddr, AuthProps, undefined) of
+        undefined ->
+            {socket_information_notfound};
+        Socket ->
+            case inet:peernameSocket(Socket) of
+                {ok, {IP, Port}} ->
+                    {ok, {IP, Port}};
+                _ ->
+                    {socket_information_notfound}
+            end
+    end.
+
+-spec user_login_authentication(rabbit_types:username(), [term()] | map()) ->
+    {'ok', rabbit_types:auth_user()}
+    | {'refused', string(), [any()]}
+    | {'error', any()}.
 user_login_authentication(Username, AuthProps) ->
-    case
-        smq_auth:client_authn(#smq_client_authn_request{
-            client_id = Username, client_key = extract_other_credentials(AuthProps)
-        })
-    of
+    logger:debug("At user_login_authentication Username: ~p Socket: ~p AuthProps: ~p", [
+        Username, getSocketInfo(AuthProps), AuthProps
+    ]),
+
+    case extract_password(AuthProps) of
+        {error, missing_password} ->
+            logger:debug("Password missing or empty", []),
+            {refused, "Missing password", []};
+        {ok, Password} ->
+            do_client_authn(Username, Password, AuthProps)
+    end.
+
+do_client_authn(Username, Password, AuthProps) ->
+    Req = #smq_client_authn_request{
+        client_id =
+            case Username of
+                U when is_binary(U) -> binary_to_list(U);
+                U when is_list(U) -> U
+            end,
+        client_key =
+            case Password of
+                P when is_binary(P) -> binary_to_list(P);
+                P when is_list(P) -> P
+            end
+    },
+
+    Result = catch smq_auth:client_authn(Req),
+
+    case Result of
         {ok, ID} ->
-            Tags = rabbit_data_coercion:to_atom(ID),
-            {ok, #auth_user{
+            Tags = [rabbit_data_coercion:to_atom(ID)],
+            Resp = #auth_user{
                 username = Username,
                 tags = Tags,
                 impl = fun() -> proplists:delete(username, AuthProps) end
-            }};
+            },
+            logger:debug("Auth OK,  Returning Resp : ~p", [Resp]),
+            {ok, Resp};
         {error, unauthenticated} ->
             {refused, "Denied by the SMQ Client AuthN", []};
         {error, {Code, Msg}} ->
-            MsgStr = io_lib:format("SMQ Client AuthN failed: Code: ~p Msg: ~p", [Code, Msg]),
-            ?LOG_ERROR("failed to authenticate : ~p", [MsgStr]),
-            {refused, lists:flatten(MsgStr), []};
+            MsgStr = lists:flatten(
+                io_lib:format("SMQ Client AuthN failed: Code: ~p Msg: ~p", [Code, Msg])
+            ),
+            logger:info("failed to authenticate : ~p", [MsgStr]),
+            {refused, MsgStr, []};
         {error, Reason} ->
-            MsgStr = io_lib:format("SMQ Client AuthN failed: Reason: ~p ", [term_to_string(Reason)]),
-            ?LOG_ERROR("failed to authenticate : ~p", [MsgStr]),
-            {refused, lists:flatten(MsgStr), []};
+            MsgStr = lists:flatten(
+                io_lib:format("SMQ Client AuthN failed: Reason: ~p ", [term_to_string(Reason)])
+            ),
+            logger:info("failed to authenticate : ~p", [MsgStr]),
+            {refused, MsgStr, []};
         {grpc_error, Details} ->
-            MsgStr = io_lib:format("SMQ Client AuthN failed: Reason: ~p ", [term_to_string(Details)]),
-            ?LOG_ERROR("failed to authenticate : ~p", [MsgStr]),
-            {refused, lists:flatten(MsgStr), []};
+            MsgStr = lists:flatten(
+                io_lib:format("SMQ Client AuthN failed: Reason: ~p ", [term_to_string(Details)])
+            ),
+            logger:info("failed to authenticate : ~p", [MsgStr]),
+            {refused, MsgStr, []};
         Other ->
-            ?LOG_ERROR("failed to authenticate : ~p", [Other]),
-            {error, {bad_response, Other}}
-    end.
-
--spec term_to_string(term()) -> string().
-% already charlist
-term_to_string(S) when is_list(S) -> S;
-term_to_string(B) when is_binary(B) -> binary_to_list(B);
-term_to_string(Other) -> lists:flatten(io_lib:format("~p", [Other])).
-
-%% When a protocol plugin uses an internal AMQP 0-9-1 client to interact with RabbitMQ core,
-%% what happens that the plugin authenticates the entire authentication context (e.g. all of: password, client_id, vhost, etc)
-%% and the internal AMQP 0-9-1 client also performs further authentication.
-%%
-%% In the latter case, the complete set of credentials are persisted behind a function call
-%% that returns an AuthProps.
-%% If the user was first authenticated by rabbit_auth_backend_http, there will be one property called
-%% `rabbit_auth_backend_http` whose value is a function that returns a proplist with all the credentials used
-%% on the first successful login.
-%%
-%% When rabbit_auth_backend_cache is involved,
-%% the property `rabbit_auth_backend_cache` is a function which returns a proplist with all the credentials used
-%% on the first successful login.
-resolve_using_persisted_credentials(AuthProps) ->
-    case proplists:get_value(rabbit_auth_backend_http, AuthProps, undefined) of
-        undefined ->
-            case proplists:get_value(rabbit_auth_backend_cache, AuthProps, undefined) of
-                undefined ->
-                    AuthProps;
-                CacheAuthPropsFun ->
-                    AuthProps ++ CacheAuthPropsFun()
-            end;
-        HttpAuthPropsFun ->
-            AuthProps ++ HttpAuthPropsFun()
-    end.
-
-%% Some protocols may add additional credentials into the AuthProps that should be propagated to
-%% the external authentication backends
-%% This function excludes any attribute that starts with rabbit_auth_backend_
-is_internal_property(rabbit_auth_backend_http) ->
-    true;
-is_internal_property(rabbit_auth_backend_cache) ->
-    true;
-is_internal_property(_Other) ->
-    false.
-
-is_internal_none_password(password, none) ->
-    true;
-is_internal_none_password(_, _) ->
-    false.
-
-is_sockOrAddr(sockOrAddr) ->
-    true;
-is_sockOrAddr(_) ->
-    false.
-
-extract_other_credentials(AuthProps) ->
-    PublicAuthProps =
-        [
-            {K, V}
-         || {K, V} <- AuthProps,
-            not is_internal_property(K) and
-                not is_internal_none_password(K, V) and
-                not is_sockOrAddr(K)
-        ],
-    case PublicAuthProps of
-        [] ->
-            resolve_using_persisted_credentials(AuthProps);
-        _ ->
-            PublicAuthProps
+            MsgStr = lists:flatten(
+                io_lib:format("SMQ Client AuthN failed: got unknown : ~p ", [
+                    term_to_string(Other)
+                ])
+            ),
+            logger:error("failed to authenticate : ~p", [MsgStr]),
+            {error, {bad_response, MsgStr}}
     end.
 
 user_login_authorization(Username, AuthProps) ->
@@ -154,7 +132,7 @@ check_vhost_access(
     do_check_vhost_access(Username, Tags, VHost, Ip, AuthzData1).
 
 do_check_vhost_access(Username, Tags, VHost, Ip, AuthzData) ->
-    ?LOG_DEBUG("Username: ~p Tags: ~p VHost: Ip: ~p AuthzData: ~p", [
+    logger:debug("At do_check_vhost_access Username: ~p Tags: ~p VHost: ~p Ip: ~p AuthzData: ~p", [
         Username, Tags, VHost, Ip, AuthzData
     ]),
     true.
@@ -169,9 +147,19 @@ check_resource_access(
     Permission,
     AuthzContext
 ) ->
-    ?LOG_DEBUG("Username: ~p Tags: ~p VHost: Type: ~p Name: ~p Permission: ~p AuthzContext: ~p", [
-        Username, Tags, VHost, Type, Name, Permission, AuthzContext
-    ]),
+    logger:debug(
+        "At check_resource_access Username: ~p Tags: ~p VHost:  ~p  Type: ~p Name: ~p Permission: ~p Socket ~p AuthzContext: ~p",
+        [
+            Username,
+            Tags,
+            VHost,
+            Type,
+            Name,
+            Permission,
+            getSocketInfo(AuthzContext),
+            AuthzContext
+        ]
+    ),
     true.
 
 check_topic_access(
@@ -180,16 +168,126 @@ check_topic_access(
     Permission,
     Context
 ) ->
-    ?LOG_DEBUG("Username: ~p Tags: ~p VHost: Type: ~p Name: ~p Permission: ~p Context: ~p", [
-        Username, Tags, VHost, Type, Name, Permission, Context
-    ]),
-    true.
+    %% Extract routing_key safely
+    RoutingKey =
+        case maps:get(routing_key, Context, undefined) of
+            undefined ->
+                %% if not defined return return empty string
+                <<"">>;
+            RK when is_binary(RK) ->
+                RK
+        end,
+    logger:debug(
+        "At check_topic_access: Username: ~p Tags: ~p VHost: ~p  Type: ~p Name: ~p Permission: ~p RoutingKey ~p Socket ~p Context: ~p",
+        [
+            Username,
+            Tags,
+            VHost,
+            Type,
+            Name,
+            Permission,
+            RoutingKey,
+            getSocketInfo(Context),
+            Context
+        ]
+    ),
+    case parse_topic_name(RoutingKey) of
+        {match, DomainID, ChannelID} ->
+            Req = #smq_client_authz_request{
+                domain_id = DomainID,
+                channel_id = ChannelID,
+                client_id = binary_to_list(Username),
+                client_type = client,
+                client_key = "",
+                type =
+                    case Permission of
+                        write -> publish;
+                        read -> subscribe
+                    end
+            },
+            logger:debug("Request Prepared : ~p", [Req]),
+
+            Result = catch smq_auth:client_authz(Req),
+
+            case Result of
+                {ok} ->
+                    true;
+                {error, {unauthorized}} ->
+                    MsgStr = lists:flatten(
+                        io_lib:format("Unauthorized", [])
+                    ),
+                    logger:debug("failed to authorize : ~p", [MsgStr]),
+                    false;
+                {error, {Code, Msg}} ->
+                    MsgStr = lists:flatten(
+                        io_lib:format("SMQ Client AuthZ failed: Code: ~p Msg: ~p", [Code, Msg])
+                    ),
+                    logger:debug("failed to authorize : ~p", [MsgStr]),
+                    false;
+                {error, Reason} ->
+                    MsgStr = lists:flatten(
+                        io_lib:format("SMQ Client AuthZ failed: Reason: ~p ", [
+                            term_to_string(Reason)
+                        ])
+                    ),
+                    logger:info("failed to authorize : ~p", [MsgStr]),
+                    false;
+                {grpc_error, Details} ->
+                    MsgStr = lists:flatten(
+                        io_lib:format("SMQ Client AuthZ failed: Reason: ~p ", [
+                            term_to_string(Details)
+                        ])
+                    ),
+                    logger:info("failed to authorize : ~p", [MsgStr]),
+                    false;
+                Other ->
+                    MsgStr = lists:flatten(
+                        io_lib:format("SMQ Client AuthZ failed: got unknown : ~p ", [
+                            term_to_string(Other)
+                        ])
+                    ),
+                    logger:info("failed to authorize : ~p", [MsgStr]),
+                    false
+            end;
+        {nomatch} ->
+            MsgStr = lists:flatten(
+                io_lib:format("Topic name does not match expected pattern: ~p", [RoutingKey])
+            ),
+            logger:debug("failed to authorize : ~p", [MsgStr]),
+            false
+    end.
 
 expiry_timestamp(_) ->
     never.
 
 %%--------------------------------------------------------------------
 
+-spec extract_password(Props :: [term()] | map()) ->
+    {ok, binary()}
+    | {error, missing_password}.
+extract_password(Props) when is_list(Props) ->
+    case proplists:get_value(password, Props, undefined) of
+        undefined ->
+            {error, missing_password};
+        % empty binary
+        <<>> ->
+            {error, missing_password};
+        Password when is_binary(Password) ->
+            {ok, Password};
+        Password when is_list(Password) ->
+            % convert list to binary
+            {ok, list_to_binary(Password)}
+    end.
+
+-spec term_to_string(term()) -> string().
+% already charlist
+term_to_string(S) when is_list(S) -> S;
+term_to_string(B) when is_binary(B) -> binary_to_list(B);
+term_to_string(Other) -> lists:flatten(io_lib:format("~p", [Other])).
+
+-spec parse_topic_name(Topic :: binary()) ->
+    {match, DomainID :: string(), ChannelID :: string()}
+    | {nomatch}.
 parse_topic_name(Topic) ->
     %% Compile the regex
     Regex = <<"^m\\.([^\\.]+)\\.c\\.([^\\.]+)(?:\\..*)?$">>,
@@ -200,123 +298,8 @@ parse_topic_name(Topic) ->
             {nomatch}
     end.
 
-context_as_parameters(Options) when is_map(Options) ->
-    % filter keys that would erase fixed parameters
-    [
-        {rabbit_data_coercion:to_atom(Key), maps:get(Key, Options)}
-     || Key <- maps:keys(Options),
-        lists:member(
-            rabbit_data_coercion:to_atom(Key), ?RESOURCE_REQUEST_PARAMETERS
-        ) =:=
-            false
-    ];
-context_as_parameters(_) ->
-    [].
-
-bool_req(PathName, Props) ->
-    case http_req(p(PathName), q(Props)) of
-        "deny" ->
-            false;
-        "allow" ->
-            true;
-        E ->
-            E
-    end.
-
-http_req(Path, Query) ->
-    http_req(Path, Query, ?RETRY_ON_KEEPALIVE_CLOSED).
-
-http_req(Path, Query, Retry) ->
-    case do_http_req(Path, Query) of
-        {error, socket_closed_remotely} ->
-            %% HTTP keepalive connection can no longer be used. Retry the request.
-            case Retry > 0 of
-                true ->
-                    http_req(Path, Query, Retry - 1);
-                false ->
-                    {error, socket_closed_remotely}
-            end;
-        Other ->
-            Other
-    end.
-
-do_http_req(Path0, Query) ->
-    URI = uri_parser:parse(Path0, [{port, 80}]),
-    {host, Host} = lists:keyfind(host, 1, URI),
-    {port, Port} = lists:keyfind(port, 1, URI),
-    HostHdr = rabbit_misc:format("~ts:~b", [Host, Port]),
-    {ok, Method} = application:get_env(rabbitmq_auth_backend_http, http_method),
-    Request =
-        case rabbit_data_coercion:to_atom(Method) of
-            get ->
-                Path = Path0 ++ "?" ++ Query,
-                ?LOG_DEBUG("auth_backend_http: GET ~ts", [Path]),
-                {Path, [{"Host", HostHdr}]};
-            post ->
-                ?LOG_DEBUG("auth_backend_http: POST ~ts", [Path0]),
-                {Path0, [{"Host", HostHdr}], "application/x-www-form-urlencoded", Query}
-        end,
-    RequestTimeout =
-        case application:get_env(rabbitmq_auth_backend_http, request_timeout) of
-            {ok, Val1} ->
-                Val1;
-            _ ->
-                infinity
-        end,
-    ConnectionTimeout =
-        case application:get_env(rabbitmq_auth_backend_http, connection_timeout) of
-            {ok, Val2} ->
-                Val2;
-            _ ->
-                RequestTimeout
-        end,
-    ?LOG_DEBUG(
-        "auth_backend_http: request timeout: ~tp, connection timeout: "
-        "~tp",
-        [RequestTimeout, ConnectionTimeout]
-    ),
-    HttpOpts =
-        [{timeout, RequestTimeout}, {connect_timeout, ConnectionTimeout}] ++ ssl_options(),
-    case httpc:request(Method, Request, HttpOpts, []) of
-        {ok, {{_HTTP, Code, _}, _Headers, Body}} ->
-            ?LOG_DEBUG("auth_backend_http: response code is ~tp, body: ~tp", [Code, Body]),
-            case lists:member(Code, ?SUCCESSFUL_RESPONSE_CODES) of
-                true ->
-                    parse_resp(Body);
-                false ->
-                    {error, {Code, Body}}
-            end;
-        {error, _} = E ->
-            E
-    end.
-
-ssl_options() ->
-    case application:get_env(rabbitmq_auth_backend_http, ssl_options) of
-        {ok, Opts0} when is_list(Opts0) ->
-            Opts1 = [{ssl, rabbit_ssl_options:fix_client(Opts0)}],
-            case application:get_env(rabbitmq_auth_backend_http, ssl_hostname_verification) of
-                {ok, wildcard} ->
-                    ?LOG_DEBUG(
-                        "Enabling wildcard-aware hostname verification for HTTP client "
-                        "connections"
-                    ),
-                    %% Needed for HTTPS connections that connect to servers that use wildcard certificates.
-                    %% See https://erlang.org/doc/man/public_key.html#pkix_verify_hostname_match_fun-1.
-                    [
-                        {customize_hostname_check, [
-                            {match_fun, public_key:pkix_verify_hostname_match_fun(https)}
-                        ]}
-                        | Opts1
-                    ];
-                _ ->
-                    Opts1
-            end;
-        _ ->
-            []
-    end.
-
 p(PathName) ->
-    {ok, Path} = application:get_env(rabbitmq_auth_backend_http, PathName),
+    {ok, Path} = application:get_env(rabbitmq_auth_backend_smq, PathName),
     Path.
 
 q(Args) ->
@@ -337,11 +320,6 @@ escape(K, Map) when is_map(Map) ->
     );
 escape(K, V) ->
     rabbit_data_coercion:to_list(K) ++ "=" ++ rabbit_http_util:quote_plus(V).
-
-parse_resp(Resp) ->
-    string:to_lower(
-        string:strip(Resp)
-    ).
 
 join_tags([]) ->
     "";

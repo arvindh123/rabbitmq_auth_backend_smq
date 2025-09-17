@@ -37,4 +37,5 @@ rebar3.crashdump
 /sbin.lock
 
 /rabbitmq_auth_backend_smq.d
+/rabbitmq-server
 

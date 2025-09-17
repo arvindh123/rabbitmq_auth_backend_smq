@@ -1,0 +1,26 @@
+networks:
+  supermq-base-net:
+    external: true
+
+services:
+  rabbitmq:
+    image: supermq/rabbitmq:latest
+    container_name: supermq-rabbit
+    ports:
+      - 1883:1883
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: secret
+      RABBITMQ_LOGS: "-"
+      RABBITMQ_LOG_LEVEL: debug
+    volumes:
+      - ./enabled_plugins:/etc/rabbitmq/enabled_plugins
+      - ./rabbitmq.conf:/etc/rabbitmq/conf.d/10-defaults.conf
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: always
+    networks:
+      - supermq-base-net
+volumes:
+  rabbitmq_data:

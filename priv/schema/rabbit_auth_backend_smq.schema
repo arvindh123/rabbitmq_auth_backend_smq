@@ -1,9 +1,25 @@
 
-{mapping, "metronome.exchange", "rabbitmq_metronome.exchange",
-    [{datatype, string}]}.
+{mapping, "smq.grpc.auth.host",     "smq_grpc.auth_host",    [{datatype, string}]}.
+{mapping, "smq.grpc.auth.port",     "smq_grpc.auth_port",    [{datatype, integer}]}.
+{mapping, "smq.grpc.clients.host",  "smq_grpc.clients_host", [{datatype, string}]}.
+{mapping, "smq.grpc.clients.port",  "smq_grpc.clients_port", [{datatype, integer}]}.
+{mapping, "smq.grpc.channels.host", "smq_grpc.channels_host",[{datatype, string}]}.
+{mapping, "smq.grpc.channels.port", "smq_grpc.channels_port",[{datatype, integer}]}.
 
-{translation, "rabbitmq_metronome.exchange",
-fun(Conf) ->
-    Exchange = cuttlefish:conf_get("metronome.exchange", Conf),
-    list_to_binary(Exchange)
-end}.
+{translation, "smq_grpc.config",
+ fun(Conf) ->
+     #{
+         auth => #{
+             host => list_to_binary(cuttlefish:conf_get("smq.grpc.auth.host", Conf)),
+             port => cuttlefish:conf_get("smq.grpc.auth.port", Conf)
+         },
+         clients => #{
+             host => list_to_binary(cuttlefish:conf_get("smq.grpc.clients.host", Conf)),
+             port => cuttlefish:conf_get("smq.grpc.clients.port", Conf)
+         },
+         channels => #{
+             host => list_to_binary(cuttlefish:conf_get("smq.grpc.channels.host", Conf)),
+             port => cuttlefish:conf_get("smq.grpc.channels.port", Conf)
+         }
+     }
+ end}.

@@ -1,2 +1,3 @@
 [build_info]
-file = "build_info.json"
+apps = ["."]
+deps = ["deps/*"]
