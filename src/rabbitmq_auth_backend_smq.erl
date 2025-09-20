@@ -24,19 +24,135 @@
 description() ->
     [{name, <<"SMQ Auth"/utf8>>}, {description, <<"SuperMQ Authentication / Authorization"/utf8>>}].
 
-%%--------------------------------------------------------------------
+-record(user_ctx, {
+    %% Which auth backend was used
+    auth :: internal | external,
+    %% Server side (the RabbitMQ listener socket)
 
-getSocketInfo(AuthProps) ->
-    case proplists:get_value(sockOrAddr, AuthProps, undefined) of
+    %% {A,B,C,D} or {K0,...,K7}
+    server_ip :: inet:ip_address() | undefined,
+    %% integer 0..65535
+    server_port :: inet:port_number() | undefined,
+
+    %% Client side (the connecting peer)
+    client_ip :: inet:ip_address() | undefined,
+    client_port :: inet:port_number() | undefined
+}).
+
+-define(BLANK_PASSWORD_REJECTION_MESSAGE,
+    "user '~ts' attempted to log in with a blank password, which is prohibited by the internal authN backend. "
+    "To use TLS/x509 certificate-based authentication, see the rabbitmq_auth_mechanism_ssl plugin and configure the client to use the EXTERNAL authentication mechanism. "
+    "Alternatively change the password for the user to be non-blank."
+).
+
+-define(USER_CTX_REJECTION_MESSAGE,
+    "Unable to build authentication context for user ~ts . Connection rejected , Reason: ~p"
+).
+
+-define(USER_CTX_SOCK_ERR_REJECTION_MESSAGE,
+    "Unable to retrieve socket information (IP/port) for authentication for user ~ts . Connection rejected, Reason: ~p"
+).
+
+-define(SMQ_AUTHN_DENIED, "smq authentication denied for user ~ts").
+-define(SMQ_AUTHN_FAILED_WITH_CODE_MSG, "smq authentication failed for user ~ts code ~p msg: ~p").
+-define(SMQ_AUTHN_FAILED_WITH_REASON, "smq authentication failed for user ~ts reason ~p ").
+-define(SMQ_AUTHN_FAILED_WITH_GRPC_REASON,
+    "smq authentication failed for user ~ts grpc reason ~p "
+).
+
+-define(SMQ_AUTHN_FAILED_FOR_OTHER_REASON,
+    "smq authentication failed for user ~ts other reason ~p "
+).
+
+%%--------------------------------------------------------------------
+%% Get server-side socket IP and port
+% get_server_ip_port(AuthProps) ->
+%     ExtractedSock =
+%         case AuthProps of
+%             %% proplist
+%             AuthPorpsList when is_list(AuthPorpsList) ->
+%                 proplists:get_value(sockOrAddr, AuthPorpsList, undefined);
+%             %% map
+%             #{sockOrAddr := S} ->
+%                 S;
+%             _ ->
+%                 undefined
+%         end,
+%     case ExtractedSock of
+%         undefined ->
+%             {not_found};
+%         Sock when is_port(Sock) ->
+%             %% Normal case: Sock is a port (#Port<...>)
+%             case rabbit_net:sockname(Sock) of
+%                 {ok, {IP, Port}} -> {ok, {IP, Port}};
+%                 Error -> {error, Error}
+%             end;
+%         Other ->
+%             {error, {unexpected_sock_value, Other}}
+%     end.
+%% InternalIpPortList example: [{{127,0,0,1}, any}, {{10,0,0,5}, 5672}]
+% is_internal_ip_port({IP, Port}, InternalIpPortList) ->
+%     lists:any(
+%         fun
+%             ({any, any}) -> true;
+%             ({AIP, any}) -> AIP =:= IP;
+%             ({AIP, APort}) -> AIP =:= IP andalso APort =:= Port
+%         end,
+%         InternalIpPortList
+%     ).
+%% Build a user_ctx record from AuthProps
+
+-spec build_user_ctx(
+    AuthProps :: list() | map(),
+    FindAuthTypeFun :: fun(
+        (
+            inet:ip_address(),
+            inet:port_number(),
+            inet:ip_address(),
+            inet:port_number()
+        ) -> internal | smq | term()
+    )
+) ->
+    {ok, #user_ctx{}} | {error, term()}.
+build_user_ctx(AuthProps, FindAuthTypeFun) ->
+    %% Extract socket from AuthProps (supports proplist or map)
+    ExtractedSock =
+        case AuthProps of
+            %% proplist
+            AuthPorpsList when is_list(AuthPorpsList) ->
+                proplists:get_value(sockOrAddr, AuthPorpsList, undefined);
+            %% map
+            #{sockOrAddr := S} ->
+                S;
+            _ ->
+                undefined
+        end,
+    case ExtractedSock of
         undefined ->
-            {socket_information_notfound};
-        Socket ->
-            case inet:peernameSocket(Socket) of
-                {ok, {IP, Port}} ->
-                    {ok, {IP, Port}};
-                _ ->
-                    {socket_information_notfound}
-            end
+            AuthType = FindAuthTypeFun(undefined, undefined, undefined, undefined),
+            {ok, #user_ctx{
+                auth = AuthType,
+                server_ip = undefined,
+                server_port = undefined,
+                client_ip = undefined,
+                client_port = undefined
+            }};
+        Sock when is_port(Sock) ->
+            case {rabbit_net:peername(Sock), rabbit_net:sockname(Sock)} of
+                {{ok, {ClientIP, ClientPort}}, {ok, {ServerIP, ServerPort}}} ->
+                    AuthType = FindAuthTypeFun(ServerIP, ServerPort, ClientIP, ClientPort),
+                    {ok, #user_ctx{
+                        auth = AuthType,
+                        server_ip = ServerIP,
+                        server_port = ServerPort,
+                        client_ip = ClientIP,
+                        client_port = ClientPort
+                    }};
+                Error ->
+                    {error, Error}
+            end;
+        Other ->
+            {error, {unexpected_sock_value, Other}}
     end.
 
 -spec user_login_authentication(rabbit_types:username(), [term()] | map()) ->
@@ -44,19 +160,88 @@ getSocketInfo(AuthProps) ->
     | {'refused', string(), [any()]}
     | {'error', any()}.
 user_login_authentication(Username, AuthProps) ->
-    logger:debug("At user_login_authentication Username: ~p Socket: ~p AuthProps: ~p", [
-        Username, getSocketInfo(AuthProps), AuthProps
-    ]),
+    do_authn(Username, AuthProps).
 
-    case extract_password(AuthProps) of
-        {error, missing_password} ->
-            logger:debug("Password missing or empty", []),
-            {refused, "Missing password", []};
-        {ok, Password} ->
-            do_client_authn(Username, Password, AuthProps)
+-spec find_auth_type_fun(
+    ServerIP :: inet:ip_address(),
+    ServerPort :: inet:port_number(),
+    ClientIP :: inet:ip_address(),
+    CientPort :: inet:port_number()
+) -> internal | external.
+find_auth_type_fun(ServerIP, ServerPort, _ClientIP, _ClientPort) ->
+    %% Load allowed internal IP:Port tuples from config
+    Allowed =
+        case application:get_env(rabbitmq_auth_backend_smq, internal_ip_ports) of
+            {ok, List} when is_list(List) -> List;
+            _ -> []
+        end,
+
+    case
+        lists:any(
+            fun({AllowedIP, AllowedPort}) ->
+                ip_port_match(ServerIP, ServerPort, AllowedIP, AllowedPort)
+            end,
+            Allowed
+        )
+    of
+        true -> internal;
+        false -> external
     end.
 
-do_client_authn(Username, Password, AuthProps) ->
+%% Helper: matches server IP/Port against allowed entry
+-spec ip_port_match(
+    inet:ip_address() | any,
+    inet:port_number() | any,
+    inet:ip_address() | any,
+    inet:port_number() | any
+) -> boolean().
+ip_port_match(ServerIP, ServerPort, AllowedIP, AllowedPort) ->
+    IPMatch = (AllowedIP =:= any) orelse (AllowedIP =:= ServerIP),
+    PortMatch = (AllowedPort =:= any) orelse (AllowedPort =:= ServerPort),
+    IPMatch andalso PortMatch.
+
+do_authn(Username, AuthProps) ->
+    logger:debug("At do_authn Username: ~p AuthProps: ~p UserCtx ~p", [
+        Username, AuthProps, build_user_ctx(AuthProps, fun find_auth_type_fun/4)
+    ]),
+    case build_user_ctx(AuthProps, fun find_auth_type_fun/4) of
+        {ok, #user_ctx{auth = internal} = UserCtx} ->
+            do_internal_authn(Username, AuthProps, UserCtx);
+        {ok, #user_ctx{auth = external} = UserCtx} ->
+            do_external_client_authn(Username, AuthProps, UserCtx);
+        {ok, #user_ctx{auth = Other}} ->
+            {error, {unexpected_auth_type, Other}};
+        {error, {sockname_failed, Reason}} ->
+            {refused, ?USER_CTX_SOCK_ERR_REJECTION_MESSAGE, [Username, Reason]};
+        {error, Reason} ->
+            {refused, ?USER_CTX_REJECTION_MESSAGE, [Username, Reason]}
+    end.
+
+do_internal_authn(Username, AuthProps, UserCtx) ->
+    case rabbit_auth_backend_internal:user_login_authentication(Username, AuthProps) of
+        {ok, #auth_user{username = U, tags = Tags}} ->
+            {ok, #auth_user{username = U, tags = Tags, impl = fun() -> UserCtx end}};
+        Refused ->
+            Refused
+    end.
+
+do_external_client_authn(Username, AuthProps, UserCtx) ->
+    case lists:keyfind(password, 1, AuthProps) of
+        {password, <<"">>} ->
+            {refused, ?BLANK_PASSWORD_REJECTION_MESSAGE, [Username]};
+        {password, ""} ->
+            {refused, ?BLANK_PASSWORD_REJECTION_MESSAGE, [Username]};
+        %% For cases when authenticating using an x.509 certificate
+        {password, none} ->
+            % ToDo: For cases when authenticating using an x.509 certificate
+            do_smq_client_authn(Username, <<"">>, AuthProps, UserCtx);
+        {password, Cleartext} ->
+            do_smq_client_authn(Username, Cleartext, AuthProps, UserCtx);
+        false ->
+            {refused, ?BLANK_PASSWORD_REJECTION_MESSAGE, [Username]}
+    end.
+
+do_smq_client_authn(Username, Password, _AuthProps, UserCtx) ->
     Req = #smq_client_authn_request{
         client_id =
             case Username of
@@ -71,74 +256,59 @@ do_client_authn(Username, Password, AuthProps) ->
     },
 
     Result = catch smq_auth:client_authn(Req),
-
     case Result of
         {ok, ID} ->
             Tags = [rabbit_data_coercion:to_atom(ID)],
             Resp = #auth_user{
                 username = Username,
                 tags = Tags,
-                impl = fun() -> proplists:delete(username, AuthProps) end
+                impl = fun() -> UserCtx end
             },
             logger:debug("Auth OK,  Returning Resp : ~p", [Resp]),
             {ok, Resp};
         {error, unauthenticated} ->
-            {refused, "Denied by the SMQ Client AuthN", []};
+            {refused, ?SMQ_AUTHN_DENIED, [Username]};
         {error, {Code, Msg}} ->
-            MsgStr = lists:flatten(
-                io_lib:format("SMQ Client AuthN failed: Code: ~p Msg: ~p", [Code, Msg])
-            ),
-            logger:info("failed to authenticate : ~p", [MsgStr]),
-            {refused, MsgStr, []};
+            {refused, ?SMQ_AUTHN_FAILED_WITH_CODE_MSG, [Username, Code, Msg]};
         {error, Reason} ->
-            MsgStr = lists:flatten(
-                io_lib:format("SMQ Client AuthN failed: Reason: ~p ", [term_to_string(Reason)])
-            ),
-            logger:info("failed to authenticate : ~p", [MsgStr]),
-            {refused, MsgStr, []};
-        {grpc_error, Details} ->
-            MsgStr = lists:flatten(
-                io_lib:format("SMQ Client AuthN failed: Reason: ~p ", [term_to_string(Details)])
-            ),
-            logger:info("failed to authenticate : ~p", [MsgStr]),
-            {refused, MsgStr, []};
+            {refused, ?SMQ_AUTHN_FAILED_WITH_REASON, [Username, Reason]};
+        {grpc_error, Reason} ->
+            {refused, ?SMQ_AUTHN_FAILED_WITH_GRPC_REASON, [Username, Reason]};
         Other ->
-            MsgStr = lists:flatten(
-                io_lib:format("SMQ Client AuthN failed: got unknown : ~p ", [
-                    term_to_string(Other)
-                ])
-            ),
-            logger:error("failed to authenticate : ~p", [MsgStr]),
-            {error, {bad_response, MsgStr}}
+            {error, {bad_response, {?SMQ_AUTHN_FAILED_FOR_OTHER_REASON, [Username, Other]}}}
     end.
 
 user_login_authorization(Username, AuthProps) ->
     case user_login_authentication(Username, AuthProps) of
         {ok, #auth_user{impl = Impl}} ->
             {ok, Impl};
+        {ok, #auth_user{impl = Impl, tags = Tags}} ->
+            {ok, Impl, Tags};
         Else ->
             Else
     end.
 
-check_vhost_access(#auth_user{username = Username, tags = Tags}, VHost, undefined) ->
-    do_check_vhost_access(Username, Tags, VHost, "", undefined);
+check_vhost_access(#auth_user{username = Username, tags = Tags, impl = Impl}, VHost, undefined) ->
+    do_check_vhost_access(Username, Tags, Impl, VHost, "", undefined);
 check_vhost_access(
-    #auth_user{username = Username, tags = Tags},
+    #auth_user{username = Username, tags = Tags, impl = Impl},
     VHost,
     AuthzData = #{peeraddr := PeerAddr}
 ) when is_map(AuthzData) ->
     AuthzData1 = maps:remove(peeraddr, AuthzData),
     Ip = parse_peeraddr(PeerAddr),
-    do_check_vhost_access(Username, Tags, VHost, Ip, AuthzData1).
+    do_check_vhost_access(Username, Tags, Impl, VHost, Ip, AuthzData1).
 
-do_check_vhost_access(Username, Tags, VHost, Ip, AuthzData) ->
-    logger:debug("At do_check_vhost_access Username: ~p Tags: ~p VHost: ~p Ip: ~p AuthzData: ~p", [
-        Username, Tags, VHost, Ip, AuthzData
-    ]),
+do_check_vhost_access(Username, Tags, Impl, VHost, Ip, AuthzData) ->
+    logger:debug(
+        "At do_check_vhost_access Username: ~p Tags: ~p Impl: ~p VHost: ~p Ip: ~p AuthzData: ~p", [
+            Username, Tags, Impl(), VHost, Ip, AuthzData
+        ]
+    ),
     true.
 
 check_resource_access(
-    #auth_user{username = Username, tags = Tags},
+    #auth_user{username = Username, tags = Tags, impl = Impl},
     #resource{
         virtual_host = VHost,
         kind = Type,
@@ -148,27 +318,26 @@ check_resource_access(
     AuthzContext
 ) ->
     logger:debug(
-        "At check_resource_access Username: ~p Tags: ~p VHost:  ~p  Type: ~p Name: ~p Permission: ~p Socket ~p AuthzContext: ~p",
+        "At check_resource_access Username: ~p Tags: ~p Impl: ~p VHost:  ~p  Type: ~p Name: ~p Permission: ~p  AuthzContext: ~p",
         [
             Username,
             Tags,
+            Impl(),
             VHost,
             Type,
             Name,
             Permission,
-            getSocketInfo(AuthzContext),
             AuthzContext
         ]
     ),
     true.
 
 check_topic_access(
-    #auth_user{username = Username, tags = Tags},
-    #resource{virtual_host = VHost, kind = topic = Type, name = Name},
+    #auth_user{username = Username, tags = Tags, impl = Impl} = User,
+    #resource{virtual_host = VHost, kind = topic = Type, name = Name} = Resource,
     Permission,
     Context
 ) ->
-    %% Extract routing_key safely
     RoutingKey =
         case maps:get(routing_key, Context, undefined) of
             undefined ->
@@ -177,20 +346,66 @@ check_topic_access(
             RK when is_binary(RK) ->
                 RK
         end,
+    %% Extract routing_key safely
     logger:debug(
-        "At check_topic_access: Username: ~p Tags: ~p VHost: ~p  Type: ~p Name: ~p Permission: ~p RoutingKey ~p Socket ~p Context: ~p",
+        "At check_topic_access: Username: ~p Tags: ~p Impl: ~p VHost: ~p  Type: ~p Name: ~p Permission: ~p RoutingKey ~p Context: ~p",
         [
             Username,
             Tags,
+            Impl(),
             VHost,
             Type,
             Name,
             Permission,
             RoutingKey,
-            getSocketInfo(Context),
             Context
         ]
     ),
+
+    case Impl of
+        Fun when is_function(Fun, 0) ->
+            %% Call the function to get the user context
+            UserCtx = Fun(),
+            case is_record(UserCtx, user_ctx) of
+                true ->
+                    case UserCtx#user_ctx.auth of
+                        external ->
+                            do_smq_authz(
+                                Username,
+                                Tags,
+                                UserCtx,
+                                VHost,
+                                Type,
+                                Name,
+                                Permission,
+                                RoutingKey,
+                                Context
+                            );
+                        internal ->
+                            rabbit_auth_backend_internal:check_topic_access(
+                                User, Resource, Permission, Context
+                            )
+                    end;
+                false ->
+                    logger:error(
+                        "failed to check_topic_access Username: ~p Permission: ~p RoutingKey: ~p Reason: user context not found  Received context: ~p ",
+                        [
+                            Username, Permission, RoutingKey, UserCtx
+                        ]
+                    ),
+                    false
+            end;
+        Other ->
+            logger:error(
+                "failed to check_topic_access  Username: ~p Permission: ~p RoutingKey: ~p Reason: implementation is not fun/0  Received implementation: ~p ",
+                [
+                    Username, Permission, RoutingKey, Other
+                ]
+            ),
+            false
+    end.
+
+do_smq_authz(Username, _Tags, _Impl, _VHost, _Type, _Name, Permission, RoutingKey, _Context) ->
     case parse_topic_name(RoutingKey) of
         {match, DomainID, ChannelID} ->
             Req = #smq_client_authz_request{
@@ -213,40 +428,41 @@ check_topic_access(
                 {ok} ->
                     true;
                 {error, {unauthorized}} ->
-                    MsgStr = lists:flatten(
-                        io_lib:format("Unauthorized", [])
-                    ),
-                    logger:debug("failed to authorize : ~p", [MsgStr]),
+                    logger:debug("unauthorized, Username: ~p Permission: ~p RoutingKey: ~p", [
+                        Username, Permission, RoutingKey
+                    ]),
                     false;
                 {error, {Code, Msg}} ->
-                    MsgStr = lists:flatten(
-                        io_lib:format("SMQ Client AuthZ failed: Code: ~p Msg: ~p", [Code, Msg])
+                    logger:notice(
+                        "smq client authz failed : Username: ~p Permission: ~p RoutingKey: ~p Code: ~p Msg: ~p",
+                        [
+                            Username, Permission, RoutingKey, Code, Msg
+                        ]
                     ),
-                    logger:debug("failed to authorize : ~p", [MsgStr]),
                     false;
                 {error, Reason} ->
-                    MsgStr = lists:flatten(
-                        io_lib:format("SMQ Client AuthZ failed: Reason: ~p ", [
-                            term_to_string(Reason)
-                        ])
+                    logger:notice(
+                        "smq client authz failed : Username: ~p Permission: ~p RoutingKey: ~p Reason: ~p",
+                        [
+                            Username, Permission, RoutingKey, Reason
+                        ]
                     ),
-                    logger:info("failed to authorize : ~p", [MsgStr]),
                     false;
-                {grpc_error, Details} ->
-                    MsgStr = lists:flatten(
-                        io_lib:format("SMQ Client AuthZ failed: Reason: ~p ", [
-                            term_to_string(Details)
-                        ])
+                {grpc_error, Reason} ->
+                    logger:notice(
+                        "smq client authz failed at grpc : Username: ~p Permission: ~p RoutingKey: ~p Reason: ~p",
+                        [
+                            Username, Permission, RoutingKey, Reason
+                        ]
                     ),
-                    logger:info("failed to authorize : ~p", [MsgStr]),
                     false;
                 Other ->
-                    MsgStr = lists:flatten(
-                        io_lib:format("SMQ Client AuthZ failed: got unknown : ~p ", [
-                            term_to_string(Other)
-                        ])
+                    logger:error(
+                        "smq client authz failed for unknown reason : Username: ~p Permission: ~p RoutingKey: ~p Unknown Reason: ~p",
+                        [
+                            Username, Permission, RoutingKey, Other
+                        ]
                     ),
-                    logger:info("failed to authorize : ~p", [MsgStr]),
                     false
             end;
         {nomatch} ->
@@ -262,24 +478,6 @@ expiry_timestamp(_) ->
 
 %%--------------------------------------------------------------------
 
--spec extract_password(Props :: [term()] | map()) ->
-    {ok, binary()}
-    | {error, missing_password}.
-extract_password(Props) when is_list(Props) ->
-    case proplists:get_value(password, Props, undefined) of
-        undefined ->
-            {error, missing_password};
-        % empty binary
-        <<>> ->
-            {error, missing_password};
-        Password when is_binary(Password) ->
-            {ok, Password};
-        Password when is_list(Password) ->
-            % convert list to binary
-            {ok, list_to_binary(Password)}
-    end.
-
--spec term_to_string(term()) -> string().
 % already charlist
 term_to_string(S) when is_list(S) -> S;
 term_to_string(B) when is_binary(B) -> binary_to_list(B);

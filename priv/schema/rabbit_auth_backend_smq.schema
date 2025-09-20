@@ -6,6 +6,7 @@
 {mapping, "smq.grpc.channels.host", "smq_grpc.channels_host",[{datatype, string}]}.
 {mapping, "smq.grpc.channels.port", "smq_grpc.channels_port",[{datatype, integer}]}.
 
+
 {translation, "smq_grpc.config",
  fun(Conf) ->
      #{
@@ -22,4 +23,17 @@
              port => cuttlefish:conf_get("smq.grpc.channels.port", Conf)
          }
      }
+ end}.
+
+
+{mapping, "rabbitmq_auth_backend_smq.internal_ip_ports",
+         "rabbitmq_auth_backend_smq.internal_ip_ports",
+         [{datatype, string}]}.
+
+{translation, "rabbitmq_auth_backend_smq.internal_ip_ports",
+ fun(Conf) ->
+     case cuttlefish:conf_get("rabbitmq_auth_backend_smq.internal_ip_ports", Conf, undefined) of
+         undefined -> [];
+         Value -> rabbitmq_auth_backend_smq_config_parser:parse_ip_port_list(Value)
+     end
  end}.
