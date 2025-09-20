@@ -188,17 +188,22 @@ find_auth_type_fun(ServerIP, ServerPort, _ClientIP, _ClientPort) ->
         false -> external
     end.
 
-%% Helper: matches server IP/Port against allowed entry
+%% @doc Match server IP and port against allowed IP and port patterns
+%% Supports 'any' wildcard for both IP and port
 -spec ip_port_match(
-    inet:ip_address() | any,
-    inet:port_number() | any,
-    inet:ip_address() | any,
-    inet:port_number() | any
+    ServerIP :: inet:ip_address(),
+    ServerPort :: inet:port_number(),
+    AllowedIP :: inet:ip_address() | any,
+    AllowedPort :: inet:port_number() | any
 ) -> boolean().
+ip_port_match(_ServerIP, _ServerPort, any, any) ->
+    true;
+ip_port_match(_ServerIP, ServerPort, any, AllowedPort) ->
+    ServerPort =:= AllowedPort;
+ip_port_match(ServerIP, _ServerPort, AllowedIP, any) ->
+    ServerIP =:= AllowedIP;
 ip_port_match(ServerIP, ServerPort, AllowedIP, AllowedPort) ->
-    IPMatch = (AllowedIP =:= any) orelse (AllowedIP =:= ServerIP),
-    PortMatch = (AllowedPort =:= any) orelse (AllowedPort =:= ServerPort),
-    IPMatch andalso PortMatch.
+    ServerIP =:= AllowedIP andalso ServerPort =:= AllowedPort.
 
 do_authn(Username, AuthProps) ->
     logger:debug("At do_authn Username: ~p AuthProps: ~p UserCtx ~p", [

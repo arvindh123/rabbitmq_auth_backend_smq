@@ -9,6 +9,7 @@ services:
     ports:
       - 1883:1883
       - "5672:5672"
+      - "5673:5673"
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: admin

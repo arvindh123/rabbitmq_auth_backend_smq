@@ -36,9 +36,6 @@ start(_StartType, _StartArgs) ->
         end,
     smq_auth:init_smq_grpc(SmqGrpcConfig),
 
-    io:format("config ~p~n", [
-        application:get_env(rabbitmq_auth_backend_smq, internal_ip_ports_list, [])
-    ]),
     rabbitmq_auth_backend_smq_sup:start_link().
 
 stop(_State) ->
