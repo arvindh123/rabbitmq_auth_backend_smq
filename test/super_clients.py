@@ -2,8 +2,8 @@
 from common import SupermqClient
 
 HOST = "localhost"
-SUPERMQ_CLIENT_ID="5b6fcf9d-6f98-4dc7-b400-aedb6645e0ca"
-SUPERMQ_CLIENT_KEY="085cd178-dbb9-429f-891d-013ed061a80b"
+SUPERMQ_CLIENT_ID="<SUPERMQ_CLIENT_ID>" ## Replace here with SuperMQ Client ID
+SUPERMQ_CLIENT_KEY="<SUPERMQ_CLIENT_KEY>" ## Replace here with SuperMQ Client Key
 
 USERNAME = SUPERMQ_CLIENT_ID
 PASSWORD = SUPERMQ_CLIENT_KEY
