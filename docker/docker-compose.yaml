@@ -8,6 +8,8 @@ services:
     container_name: supermq-rabbit
     ports:
       - 1883:1883
+      - "5670:5670"
+      - "5671:5671"
       - "5672:5672"
       - "5673:5673"
       - "15672:15672"
@@ -19,6 +21,9 @@ services:
     volumes:
       - ./enabled_plugins:/etc/rabbitmq/enabled_plugins
       - ./rabbitmq.conf:/etc/rabbitmq/conf.d/10-defaults.conf
+      - ./certs/ca.crt:/etc/rabbitmq/ssl/ca.crt:ro
+      - ./certs/server.crt:/etc/rabbitmq/ssl/server.crt:ro
+      - ./certs/server.key:/etc/rabbitmq/ssl/server.key:ro
       - rabbitmq_data:/var/lib/rabbitmq
     restart: always
     networks:

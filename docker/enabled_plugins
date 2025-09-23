@@ -1,1 +1,1 @@
-[rabbitmq_management,rabbitmq_mqtt,rabbitmq_web_mqtt,rabbitmq_auth_backend_smq].
+[rabbitmq_management,rabbitmq_mqtt,rabbitmq_web_mqtt,rabbitmq_auth_mechanism_ssl,rabbitmq_auth_mechanism_supermq_mtls,rabbitmq_auth_backend_supermq].

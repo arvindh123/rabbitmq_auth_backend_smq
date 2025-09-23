@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
-%% @doc rabbitmq_auth_backend_smq
+%% @doc rabbitmq_auth_backend_supermq
 %% @end
 %%%-------------------------------------------------------------------
 
--module(rabbitmq_auth_backend_smq).
+-module(rabbitmq_auth_backend_supermq).
 
 -include_lib("rabbit_common/include/rabbit.hrl").
 -include_lib("smq_auth/include/smq_auth.hrl").
@@ -106,11 +106,11 @@ description() ->
     AuthProps :: list() | map(),
     FindAuthTypeFun :: fun(
         (
-            inet:ip_address(),
-            inet:port_number(),
-            inet:ip_address(),
-            inet:port_number()
-        ) -> internal | smq | term()
+            inet:ip_address() | undefined,
+            inet:port_number() | undefined,
+            inet:ip_address() | undefined,
+            inet:port_number() | undefined
+        ) -> internal | external
     )
 ) ->
     {ok, #user_ctx{}} | {error, term()}.
@@ -151,6 +151,20 @@ build_user_ctx(AuthProps, FindAuthTypeFun) ->
                 Error ->
                     {error, Error}
             end;
+        {sslsocket, _, _} = SslSock ->
+            case {ssl:peername(SslSock), ssl:sockname(SslSock)} of
+                {{ok, {ClientIP, ClientPort}}, {ok, {ServerIP, ServerPort}}} ->
+                    AuthType = FindAuthTypeFun(ServerIP, ServerPort, ClientIP, ClientPort),
+                    {ok, #user_ctx{
+                        auth = AuthType,
+                        server_ip = ServerIP,
+                        server_port = ServerPort,
+                        client_ip = ClientIP,
+                        client_port = ClientPort
+                    }};
+                Error ->
+                    {error, Error}
+            end;
         Other ->
             {error, {unexpected_sock_value, Other}}
     end.
@@ -163,15 +177,15 @@ user_login_authentication(Username, AuthProps) ->
     do_authn(Username, AuthProps).
 
 -spec find_auth_type_fun(
-    ServerIP :: inet:ip_address(),
-    ServerPort :: inet:port_number(),
-    ClientIP :: inet:ip_address(),
-    CientPort :: inet:port_number()
+    ServerIP :: inet:ip_address() | undefined,
+    ServerPort :: inet:port_number() | undefined,
+    ClientIP :: inet:ip_address() | undefined,
+    ClientPort :: inet:port_number() | undefined
 ) -> internal | external.
 find_auth_type_fun(ServerIP, ServerPort, _ClientIP, _ClientPort) ->
     %% Load allowed internal IP:Port tuples from config
     Allowed =
-        case application:get_env(rabbitmq_auth_backend_smq, internal_ip_ports) of
+        case application:get_env(rabbitmq_auth_backend_supermq, internal_ip_ports) of
             {ok, List} when is_list(List) -> List;
             _ -> []
         end,
@@ -189,20 +203,26 @@ find_auth_type_fun(ServerIP, ServerPort, _ClientIP, _ClientPort) ->
     end.
 
 %% @doc Match server IP and port against allowed IP and port patterns
-%% Supports 'any' wildcard for both IP and port
+%% Supports 'any' wildcard for both IP and port, and handles undefined values
 -spec ip_port_match(
-    ServerIP :: inet:ip_address(),
-    ServerPort :: inet:port_number(),
-    AllowedIP :: inet:ip_address() | any,
-    AllowedPort :: inet:port_number() | any
+    ServerIP :: inet:ip_address() | undefined,
+    ServerPort :: inet:port_number() | undefined,
+    AllowedIP :: inet:ip_address() | any | undefined,
+    AllowedPort :: inet:port_number() | any | undefined
 ) -> boolean().
+ip_port_match(undefined, _, _, _) ->
+    false;
+ip_port_match(_, undefined, _, _) ->
+    false;
 ip_port_match(_ServerIP, _ServerPort, any, any) ->
     true;
-ip_port_match(_ServerIP, ServerPort, any, AllowedPort) ->
+ip_port_match(_ServerIP, ServerPort, any, AllowedPort) when ServerPort =/= undefined ->
     ServerPort =:= AllowedPort;
-ip_port_match(ServerIP, _ServerPort, AllowedIP, any) ->
+ip_port_match(ServerIP, _ServerPort, AllowedIP, any) when ServerIP =/= undefined ->
     ServerIP =:= AllowedIP;
-ip_port_match(ServerIP, ServerPort, AllowedIP, AllowedPort) ->
+ip_port_match(ServerIP, ServerPort, AllowedIP, AllowedPort) when
+    ServerIP =/= undefined, ServerPort =/= undefined
+->
     ServerIP =:= AllowedIP andalso ServerPort =:= AllowedPort.
 
 do_authn(Username, AuthProps) ->
@@ -238,8 +258,7 @@ do_external_client_authn(Username, AuthProps, UserCtx) ->
             {refused, ?BLANK_PASSWORD_REJECTION_MESSAGE, [Username]};
         %% For cases when authenticating using an x.509 certificate
         {password, none} ->
-            % ToDo: For cases when authenticating using an x.509 certificate
-            do_smq_client_authn(Username, <<"">>, AuthProps, UserCtx);
+            does_smq_client_exists(Username, AuthProps, UserCtx);
         {password, Cleartext} ->
             do_smq_client_authn(Username, Cleartext, AuthProps, UserCtx);
         false ->
@@ -263,10 +282,9 @@ do_smq_client_authn(Username, Password, _AuthProps, UserCtx) ->
     Result = catch smq_auth:client_authn(Req),
     case Result of
         {ok, ID} ->
-            Tags = [rabbit_data_coercion:to_atom(ID)],
             Resp = #auth_user{
                 username = Username,
-                tags = Tags,
+                tags = [],
                 impl = fun() -> UserCtx end
             },
             logger:debug("Auth OK,  Returning Resp : ~p", [Resp]),
@@ -281,6 +299,20 @@ do_smq_client_authn(Username, Password, _AuthProps, UserCtx) ->
             {refused, ?SMQ_AUTHN_FAILED_WITH_GRPC_REASON, [Username, Reason]};
         Other ->
             {error, {bad_response, {?SMQ_AUTHN_FAILED_FOR_OTHER_REASON, [Username, Other]}}}
+    end.
+
+does_smq_client_exists(Username, _AuthProps, UserCtx) ->
+    case smq_auth:check_client_exists(Username) of
+        true ->
+            Resp = #auth_user{
+                username = Username,
+                tags = [],
+                impl = fun() -> UserCtx end
+            },
+            logger:debug("Auth OK,  Returning Resp : ~p", [Resp]),
+            {ok, Resp};
+        _ ->
+            {refused, ?SMQ_AUTHN_DENIED, [Username]}
     end.
 
 user_login_authorization(Username, AuthProps) ->
@@ -502,7 +534,7 @@ parse_topic_name(Topic) ->
     end.
 
 p(PathName) ->
-    {ok, Path} = application:get_env(rabbitmq_auth_backend_smq, PathName),
+    {ok, Path} = application:get_env(rabbitmq_auth_backend_supermq, PathName),
     Path.
 
 q(Args) ->
@@ -536,10 +568,7 @@ parse_peeraddr(unknown) ->
 parse_peeraddr(PeerAddr) ->
     handle_inet_ntoa_peeraddr(inet:ntoa(PeerAddr), PeerAddr).
 
--spec handle_inet_ntoa_peeraddr(
-    {error, term()} | string(),
-    inet:ip_address() | unknown
-) ->
+-spec handle_inet_ntoa_peeraddr({'error', term()} | string(), inet:ip_address() | unknown) ->
     string().
 handle_inet_ntoa_peeraddr({error, einval}, PeerAddr) ->
     rabbit_data_coercion:to_list(PeerAddr);

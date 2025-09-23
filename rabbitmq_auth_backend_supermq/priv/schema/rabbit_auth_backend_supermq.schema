@@ -26,14 +26,14 @@
  end}.
 
 
-{mapping, "rabbitmq_auth_backend_smq.internal_ip_ports",
-         "rabbitmq_auth_backend_smq.internal_ip_ports",
+{mapping, "rabbitmq_auth_backend_supermq.internal_ip_ports",
+         "rabbitmq_auth_backend_supermq.internal_ip_ports",
          [{datatype, string}]}.
 
-{translation, "rabbitmq_auth_backend_smq.internal_ip_ports",
+{translation, "rabbitmq_auth_backend_supermq.internal_ip_ports",
  fun(Conf) ->
-     case cuttlefish:conf_get("rabbitmq_auth_backend_smq.internal_ip_ports", Conf, undefined) of
+     case cuttlefish:conf_get("rabbitmq_auth_backend_supermq.internal_ip_ports", Conf, undefined) of
          undefined -> [];
-         Value -> rabbitmq_auth_backend_smq_config_parser:parse_ip_port_list(Value)
+         Value -> rabbitmq_auth_backend_supermq_config_parser:parse_ip_port_list(Value)
      end
  end}.

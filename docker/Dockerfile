@@ -4,5 +4,6 @@ FROM rabbitmq:4.1.4-management
 COPY ./plugins /opt/rabbitmq/plugins
 
 
-# Enable your plugin (replace with your actual plugin name)
-RUN rabbitmq-plugins enable --offline rabbitmq_auth_backend_smq
+RUN rabbitmq-plugins enable --offline rabbitmq_auth_backend_supermq
+
+RUN rabbitmq-plugins enable --offline rabbitmq_auth_mechanism_supermq_mtls

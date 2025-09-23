@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
-%% @doc rabbitmq_auth_backend_smq_config_parser
+%% @doc rabbitmq_auth_backend_supermq_config_parser
 %% @end
 %%%-------------------------------------------------------------------
 
--module(rabbitmq_auth_backend_smq_config_parser).
+-module(rabbitmq_auth_backend_supermq_config_parser).
 -export([parse_ip_port_list/1]).
 
 parse_ip_port_list(ConfigStr) ->

@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
-%% @doc rabbitmq_auth_backend_smq application
+%% @doc rabbitmq_auth_backend_supermq_app application
 %% @end
 %%%-------------------------------------------------------------------
 
--module(rabbitmq_auth_backend_smq_app).
+-module(rabbitmq_auth_backend_supermq_app).
 
 -behaviour(application).
 
@@ -36,7 +36,7 @@ start(_StartType, _StartArgs) ->
         end,
     smq_auth:init_smq_grpc(SmqGrpcConfig),
 
-    rabbitmq_auth_backend_smq_sup:start_link().
+    rabbitmq_auth_backend_supermq_sup:start_link().
 
 stop(_State) ->
     ok.
