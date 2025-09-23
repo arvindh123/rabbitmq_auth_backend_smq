@@ -112,8 +112,8 @@ python test/super_clients.py
 > ⚠️ **Important:** Before running `test/super_clients.py`, update the following variables with your generated SuperMQ client credentials:
 
 ```python
-SUPERMQ_CLIENT_ID="5b6fcf9d-6f98-4dc7-b400-aedb6645e0ca"
-SUPERMQ_CLIENT_KEY="085cd178-dbb9-429f-891d-013ed061a80b"
+SUPERMQ_CLIENT_ID="<SUPERMQ_CLIENT_ID>" ## Replace here with SuperMQ Client ID
+SUPERMQ_CLIENT_KEY="<SUPERMQ_CLIENT_KEY>" ## Replace here with SuperMQ Client Key
 ```
 
 ---
@@ -123,7 +123,3 @@ SUPERMQ_CLIENT_KEY="085cd178-dbb9-429f-891d-013ed061a80b"
 * Always switch to the `docker/certs` directory when generating or managing certificates.
 * The CA certificate (`ca.crt`) should be trusted by any clients connecting to RabbitMQ.
 * Internal and SuperMQ client certificates are required for TLS/mTLS authentication with the broker.
-
----
-
-Do you want me to **add a visual directory structure** showing where the scripts, certs, and test files are located? This helps developers quickly locate everything.
