@@ -16,7 +16,7 @@ Together, these plugins enable **secure integration of the SuperMQ authenticatio
 
 ## Architecture Diagram
 
-![Architecture Diagram](architecture.drawio.svg)
+![Architecture Diagram](./architecture.drawio.svg)
 
 ---
 
