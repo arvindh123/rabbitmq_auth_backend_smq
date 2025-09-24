@@ -3,6 +3,8 @@ import traceback
 import pika
 from pika.compat import as_bytes
 from pika.credentials import  PlainCredentials, ExternalCredentials
+import paho.mqtt.client as mqtt
+import time
 
 class SupermqmTLSCredentials(ExternalCredentials):
     """Custom SASL mechanism for SUPERMQ."""
@@ -153,6 +155,120 @@ class SupermqClient:
             print(f"❌ Test connection failed: {e}")
 
 
+class SupermqMQTTClient:
+    """
+    MQTT client for SuperMQ supporting:
+      - Non-TLS
+      - TLS
+      - mTLS (mutual TLS)
+    """
+    def __init__(self, host, port, username=None, password=None,
+                 ca_cert=None, client_cert=None, client_key=None,test_topic="hello"):
+        self.host = host
+        self.port = port
+        self.username = username
+        self.password = password
+        self.ca_cert = ca_cert
+        self.client_cert = client_cert
+        self.client_key = client_key
+        self.client = mqtt.Client()
+        self.connType = ""
+
+
+        if self.username and self.password:
+            self.client.username_pw_set(username, password)
+
+        if self.ca_cert:
+            if self.client_cert and self.client_key:
+                # mTLS
+                self.client.tls_set(ca_certs=self.ca_cert,
+                                    certfile=self.client_cert,
+                                    keyfile=self.client_key,
+                                    cert_reqs=ssl.CERT_REQUIRED,
+                                    tls_version=ssl.PROTOCOL_TLS_CLIENT)
+                self.connType = "mTLS"
+                print("🔐 Using mTLS (client + server certificates).")
+            else:
+                # TLS only
+                self.client.tls_set(ca_certs=self.ca_cert,
+                                    cert_reqs=ssl.CERT_REQUIRED,
+                                    tls_version=ssl.PROTOCOL_TLS_CLIENT)
+                self.connType = "TLS"
+                print("🔐 Using TLS (server certificate only).")
+        else:
+            self.connType = "without TLS"
+            print("⚠️ Connecting without TLS.")
+
+    def connect(self):
+        """Connect to MQTT broker."""
+        try:
+            self.client.connect(self.host, self.port)
+            print(f"✅ Connected to MQTT broker at {self.host}:{self.port}")
+        except Exception as e:
+            traceback.print_exc()
+            print(f"❌ Connection failed: {e}")
+
+    def publish(self, topic, message):
+        """Publish a message to a topic."""
+        result = self.client.publish(topic, message)
+        status = result[0]
+        if status == 0:
+            print(f"📤 Sent message to topic '{topic}': {message}")
+        else:
+            print(f"❌ Failed to send message to topic {topic}")
+
+
+
+    def disconnect(self):
+        """Disconnect from MQTT broker."""
+        self.client.disconnect()
+        print("🔒 Disconnected from MQTT broker.")
+
+    def test_publish(self, topic, message="Hello World!"):
+        """Test connection by connecting, publishing, and disconnecting."""
+        message = f"{message} from {self.connType}"
+        try:
+            self.client.connect(self.host, self.port)
+            self.client.loop_start()  # ensures publish+disconnect actually run
+            info =self.client.publish(topic,message  )
+            info.wait_for_publish()
+            print(f"✅ Published to '{topic}': {message}")
+
+            # Optional: give broker a moment before disconnect
+            time.sleep(0.5)
+
+            self.client.loop_stop()
+            self.client.disconnect()
+        except Exception as e:
+            traceback.print_exc()
+            print(f"❌ Test publish failed: {e}")
+
+    def test_subscribe(self, topic):
+        """Test subscribing to a topic."""
+
+        def on_connect(client, userdata, flags, rc):
+            if rc == 0:
+                print("✅ Connected successfully, subscribing...")
+                client.subscribe(topic)
+            else:
+                print(f"❌ Connection failed with code {rc}")
+
+        def on_message(client, userdata, msg):
+            print(f"📥 Received message at {self.connType}: {msg.payload.decode()} on topic {msg.topic}")
+        def on_subscribe(client, userdata, mid, granted_qos):
+            print(f"📡 Subscribed! mid={mid}, QoS={granted_qos}")
+
+        self.client.on_connect = on_connect
+        self.client.on_message = on_message
+        self.client.on_subscribe = on_subscribe
+
+        try:
+            self.client.connect(self.host, self.port)
+            print(f"🔗 Subscribing to {topic} on {self.host}:{self.port}")
+            self.client.loop_start()  # ✅ start loop to receive messages
+        except Exception as e:
+            print(f"❌ Subscribe failed: {e}")
+
 if __name__ == "__main__":
 
     # Example: mTLS
@@ -171,3 +287,4 @@ if __name__ == "__main__":
     print("This is a library for testing")
     os.exit(1)
     pass
+

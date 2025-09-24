@@ -29,8 +29,8 @@ Do you want me to also add a **one-line “purpose” description** for the top 
 
 Make sure the following are installed on your system:
 
-* **Erlang**
-* **Elixir**
+* **Erlang v27.X**
+* **Elixir v1.18.X** 
 * **Elixir Language Server (elp extension)** in your code editor
 * Ensure both **Erlang** and **Elixir** are available in your system `PATH`.
 
