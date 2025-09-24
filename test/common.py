@@ -269,6 +269,44 @@ class SupermqMQTTClient:
         except Exception as e:
             print(f"❌ Subscribe failed: {e}")
 
+class SupermqMQTTWSClient(SupermqMQTTClient):
+    def __init__(self, host, port, username=None, password=None,
+                 ca_cert=None, client_cert=None, client_key=None,
+                 test_topic="hello", ws_path="/mqtt"):
+        super().__init__(host, port, username, password,
+                         ca_cert, client_cert, client_key,
+                         test_topic)
+        self.client = mqtt.Client(transport="websockets")
+        self.client.ws_set_options(path=ws_path)
+
+        if self.username and self.password:
+            self.client.username_pw_set(username, password)
+
+        if self.ca_cert:
+            if self.client_cert and self.client_key:
+                # mTLS
+                self.client.tls_set(ca_certs=self.ca_cert,
+                                    certfile=self.client_cert,
+                                    keyfile=self.client_key,
+                                    cert_reqs=ssl.CERT_REQUIRED,
+                                    tls_version=ssl.PROTOCOL_TLS_CLIENT)
+                self.connType = "mTLS"
+                print("🔐 Using mTLS (client + server certificates).")
+            else:
+                # TLS only
+                self.client.tls_set(ca_certs=self.ca_cert,
+                                    cert_reqs=ssl.CERT_REQUIRED,
+                                    tls_version=ssl.PROTOCOL_TLS_CLIENT)
+                self.connType = "TLS"
+                print("🔐 Using TLS (server certificate only).")
+        else:
+            self.connType = "without TLS"
+            print("⚠️ Connecting without TLS.")
+        self.connType += " (WebSocket)"
+
+        print(f"🌐 Using MQTT over WebSocket at path {ws_path} {self.username} {self.password } {self.host} {self.port}")
+
+
 if __name__ == "__main__":
 
     # Example: mTLS

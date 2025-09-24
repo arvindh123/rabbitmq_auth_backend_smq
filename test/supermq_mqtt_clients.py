@@ -20,7 +20,7 @@ def supermq_client_tls_sub():
 
 def supermq_client_mtls_sub():
     PORT = 8883
-    SupermqMQTTClient(host=HOST, port=PORT, username=USERNAME, password=PASSWORD,ca_cert="docker/certs/ca.crt", client_cert="docker/certs/supermq-client.crt", client_key="docker/certs/supermq-client.key").test_subscribe(topic)
+    SupermqMQTTClient(host=HOST, port=PORT, ca_cert="docker/certs/ca.crt", client_cert="docker/certs/supermq-client.crt", client_key="docker/certs/supermq-client.key").test_subscribe(topic)
 
 
 
@@ -34,9 +34,11 @@ def supermq_client_tls_pub():
 
 def supermq_client_mtls_pub():
     PORT = 8883
-    SupermqMQTTClient(host=HOST, port=PORT, username=USERNAME, password=PASSWORD,ca_cert="docker/certs/ca.crt", client_cert="docker/certs/supermq-client.crt", client_key="docker/certs/supermq-client.key").test_publish(topic)
+    SupermqMQTTClient(host=HOST, port=PORT, ca_cert="docker/certs/ca.crt", client_cert="docker/certs/supermq-client.crt", client_key="docker/certs/supermq-client.key").test_publish(topic)
 
-
+def supermq_client_mtls_pub_invalid_certs():
+    PORT = 8883
+    SupermqMQTTClient(host=HOST, port=PORT, ca_cert="docker/certs/ca.crt", client_cert="docker/certs/client.crt", client_key="docker/certs/client.key").test_publish(topic)
 
 if __name__ == "__main__":
     supermq_client_non_tls_sub()
@@ -51,4 +53,7 @@ if __name__ == "__main__":
     supermq_client_tls_pub()
     print("======================================")
     supermq_client_mtls_pub()
+    print("======================================")
+    print("Connecting with internal client certificates")
+    supermq_client_mtls_pub_invalid_certs()
     time.sleep(1)
